@@ -1,0 +1,25 @@
+name: Serverless-Gateway Version Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        description: the version to update to
+
+env:
+  version: ${{ github.event.inputs.version }}
+
+jobs:
+  update-serverless-gateway-version:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.AKEYLESS_CI_COMMUNITY_TOKEN }}
+
+      - name: Update Serverless Gateway version
+        run: .github/scripts/version_update_release.sh
+
