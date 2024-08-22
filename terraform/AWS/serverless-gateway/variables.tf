@@ -14,7 +14,7 @@ variable "region" {
 variable "image_tag" {
   description = "Image tag of the image from AWS Public ECR Image Gallery we are pulling from"
   type        = string
-  default     = "0.3.6"
+  default     = "0.3.7"
 }
 
 variable "create_log_group_for_lambda" {
