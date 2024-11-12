@@ -26,7 +26,7 @@ param admin_access_key = '<admin_access_key>'
                   The input should be in this json format. See the below example:
                   '[{"name": "", "access_id": "", "permissions": ["admin"]}]'
                   ''')
-param allowed_access_permissions = '[{\"name\": \"\", \"access_id\": \"\", \"permissions\": [\"admin\"]}]'
+param allowed_access_permissions = '[{"name": "", "access_id": "", "permissions": ["admin"]}]'
 
 @description('''Akeyless Customer key fragments (Zero Knowledge).
                 For more information https://docs.akeyless.io/docs/implement-zero-knowledge
