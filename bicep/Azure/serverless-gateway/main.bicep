@@ -1,57 +1,173 @@
-using 'main.bicep'
+@description('Application suffix that will be applied to all resources')
+param appSuffix string = uniqueString(resourceGroup().id)
 
-@description('Initial Display Name')
-param initial_display_name = 'function_app'
+@description('The location to deploy all my resources')
+param location string = resourceGroup().location
 
-@description('''This is the url for Akeyless service,
-available inputs are https://vault.akeyless.io or  https://vault.eu.akeyless.io''')
-param akeyless_url = 'https://vault.akeyless.io'
+@description('The name of the log analytics workspace')
+param logAnalyticsWorkspaceName string = 'log-${appSuffix}'
 
-@description('Cluster Name')
-param cluster_name = 'function_app'
-
-@description('Allowed values are azure or access_key https://docs.akeyless.io/docs/access-and-authentication-method')
-    param admin_access_id_type = 'azure'
-
-@description('Admin Account ID')
-param admin_account_id = '<admin_account_id>'
-
-@description('Akeyless Admin Access ID')
-param admin_access_id = '<admin_access_id>'
-
-@description('Akeyless Admin Access Key - not relevant when admin_access_id_type = azure')
-param admin_access_key = '<admin_access_key>'
-
-@description('''Akeyless Allowed Access Permissions
-                  The input should be in this json format. See the below example:
-                  '[{"name": "", "access_id": "", "permissions": ["admin"]}]'
-                  ''')
-param allowed_access_permissions = '[{\"name\": \"\", \"access_id\": \"\", \"permissions\": [\"admin\"]}]'
-
-@description('''Akeyless Customer key fragments (Zero Knowledge).
-                For more information https://docs.akeyless.io/docs/implement-zero-knowledge
-                The input should be in json format. See the below example.
-                Use the exact format here inside the {braces} and add it to the `default = ` empty value below.
-                {
-                  "customer_fragments": [
-                      {
-                          "id": "<Customer Fragment ID>",
-                          "value": "<Value>",
-                          "description": "My Serverless Fragment",
-                          "name": "ServerLessFragment"
-                      }
-                  ]
-                }''')
-param customer_fragments = '{}'
-
-@description('The name of the function app')
-param functionAppName = 'akeyless-serverless-gateway'
+@description('The name of the Application Insights workspace')
+param appInsightsName string = 'appinsights-${appSuffix}'
 
 @description('Name of the managed environment')
-param managedEnvironmentName = 'serverless-gateway'
+param managedEnvironmentName string
 
-@description('docker image')
-param docker_img = 'akeyless.azurecr.io/akeyless/serverless-gateway'
+param functionAppName string
 
-@description('docker tag')
-param docker_tag = '0.0.24'
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+    name: logAnalyticsWorkspaceName
+    location: location
+    properties: {
+        sku: {
+            name: 'PerGB2018'
+        }
+        retentionInDays: 30
+    }
+}
+
+resource appInsights 'microsoft.insights/components@2020-02-02' = {
+    name: appInsightsName
+    location: location
+    kind: 'web'
+    properties: {
+        Application_Type: 'web'
+        WorkspaceResourceId: logAnalytics.id
+        IngestionMode: 'LogAnalytics'
+        publicNetworkAccessForIngestion: 'Enabled'
+        publicNetworkAccessForQuery: 'Enabled'
+    }
+}
+
+resource managedEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
+    name: managedEnvironmentName
+    location: location
+    properties: {
+        appLogsConfiguration: {
+            destination: 'log-analytics'
+            logAnalyticsConfiguration: {
+                customerId: logAnalytics.properties.customerId
+                sharedKey: logAnalytics.listKeys().primarySharedKey
+            }
+        }
+    }
+}
+
+param initial_display_name string
+param akeyless_url string
+param cluster_name string
+param admin_access_id_type string
+param admin_access_id string
+param admin_access_key string
+param allowed_access_permissions string
+param customer_fragments string
+param docker_img string
+param docker_tag string
+param admin_account_id string
+
+resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
+    name: functionAppName
+    location: location
+    tags: {}
+    kind: 'functionapp,linux,container,azurecontainerapps'
+    identity: {
+        type:  admin_access_id_type == 'azure' ? 'SystemAssigned' : 'None'
+    }
+    properties: {
+        siteConfig: {
+            linuxFxVersion: 'DOCKER|${docker_img}:${docker_tag}'
+            functionAppScaleLimit: 10
+            minimumElasticInstanceCount: 1
+            cors: {
+                allowedOrigins: ['https://console.akeyless.io']
+                }
+        }
+        managedEnvironmentId: managedEnvironment.id
+        storageAccountRequired: false
+    }
+}
+
+var envVars = [
+    {
+        name: 'INITIAL_DISPLAY_NAME'
+        value: initial_display_name
+    }
+    {
+        name: 'AKEYLESS_URL'
+        value: akeyless_url
+    }
+    {
+        name: 'CLUSTER_NAME'
+        value: cluster_name
+    }
+    {
+        name: 'ADMIN_ACCESS_ID_TYPE'
+        value: admin_access_id_type
+    }
+    {
+        name: 'ADMIN_ACCESS_ID'
+        value: base64(admin_access_id)
+    }
+    {
+        name: 'ALLOWED_ACCESS_PERMISSIONS'
+        value: allowed_access_permissions
+    }
+    {
+        name: 'CLUSTER_URL'
+        value: 'HTTPS://${functionApp.properties.defaultHostName}/api/gateway/console'
+    }
+    {
+        name: 'CUSTOMER_FRAGMENTS'
+        value: customer_fragments
+    }
+
+
+    {
+        name: 'ADMIN_ACCOUNT_ID'
+        value: admin_account_id
+    }
+
+]
+
+var extraVars = [
+     {
+         name: 'ADMIN_ACCESS_KEY'
+         value: admin_access_key
+     }
+]
+
+var appInsightsVars = [
+    {
+        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+        value: appInsights.properties.ConnectionString
+    }
+    {
+        name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+        value: appInsights.properties.InstrumentationKey
+    }
+    {
+        name: 'ApplicationInsightsAgent_EXTENSION_VERSION'
+        value: '~3'
+    }
+]
+
+var combined = union(
+    admin_access_id_type == 'azure' ? envVars : union(envVars, extraVars),
+    appInsightsVars
+)
+
+resource updateAppSettings 'Microsoft.Web/sites/config@2022-03-01' = {
+    parent: functionApp
+    name: 'web'
+    properties: {
+        linuxFxVersion: 'DOCKER|${docker_img}:${docker_tag}'
+        functionAppScaleLimit: 10
+        minimumElasticInstanceCount: 1
+        appSettings: combined
+        cors: {
+            allowedOrigins: ['https://console.akeyless.io']
+            }
+    }
+}
+
+output FunctionAppURL string = 'https://${functionApp.properties.defaultHostName}/api/gateway/console
