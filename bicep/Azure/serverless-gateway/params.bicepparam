@@ -54,4 +54,4 @@ param managedEnvironmentName = 'serverless-gateway'
 param docker_img = 'akeyless.azurecr.io/akeyless/serverless-gateway'
 
 @description('docker tag')
-param docker_tag = '0.0.24'
+param docker_tag = 'latest'
