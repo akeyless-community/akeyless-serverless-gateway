@@ -114,7 +114,7 @@ var envVars = [
     }
     {
         name: 'CLUSTER_URL'
-        value: 'HTTPS://${functionApp.properties.defaultHostName}/api/gateway/console'
+        value: 'HTTPS://${functionApp.properties.defaultHostName}/api/gw/console'
     }
     {
         name: 'CUSTOMER_FRAGMENTS'
