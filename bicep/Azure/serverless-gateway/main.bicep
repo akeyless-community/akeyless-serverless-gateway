@@ -140,8 +140,6 @@ var envVars = [
         name: 'CUSTOMER_FRAGMENTS'
         value: customer_fragments
     }
-
-
     {
         name: 'ADMIN_ACCOUNT_ID'
         value: admin_account_id
@@ -153,10 +151,10 @@ var envVars = [
 ]
 
 var extraVars = [
-     {
-         name: 'ADMIN_ACCESS_KEY'
-         value: admin_access_key
-     }
+    {
+        name: 'ADMIN_ACCESS_KEY'
+        value: admin_access_key
+    }
 ]
 
 var appInsightsVars = [
