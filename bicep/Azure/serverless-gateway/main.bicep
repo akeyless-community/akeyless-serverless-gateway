@@ -13,6 +13,12 @@ param appInsightsName string = 'appinsights-${appSuffix}'
 @description('Name of the managed environment')
 param managedEnvironmentName string
 
+@description('Name of the storage account')
+param storageAccountName string = 'storageaccount${appSuffix}'
+
+@description('Name of the storage account SKU')
+param storageAccountSkuName string = 'Standard_LRS'
+
 param functionAppName string
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -53,6 +59,18 @@ resource managedEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
     }
 }
 
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-04-01' = {
+    name: storageAccountName
+    location: location 
+    sku: {
+        name: storageAccountSkuName
+    }
+    kind: 'StorageV2'
+    properties: {
+        supportsHttpsTrafficOnly: true
+    }
+}
+
 param initial_display_name string
 param akeyless_url string
 param cluster_name string
@@ -86,6 +104,8 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         storageAccountRequired: false
     }
 }
+
+var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
 
 var envVars = [
     {
@@ -126,7 +146,10 @@ var envVars = [
         name: 'ADMIN_ACCOUNT_ID'
         value: admin_account_id
     }
-
+    {
+        name: 'AzureWebJobsStorage'
+        value: storageAccountConnectionString
+    }
 ]
 
 var extraVars = [
