@@ -170,4 +170,4 @@ resource updateAppSettings 'Microsoft.Web/sites/config@2022-03-01' = {
     }
 }
 
-output FunctionAppURL string = 'https://${functionApp.properties.defaultHostName}/api/gateway/console'
+output FunctionAppURL string = 'https://${functionApp.properties.defaultHostName}/api/gw/console'
