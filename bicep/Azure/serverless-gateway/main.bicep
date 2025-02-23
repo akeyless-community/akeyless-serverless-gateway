@@ -14,7 +14,7 @@ param appInsightsName string = 'appinsights-${appSuffix}'
 param managedEnvironmentName string
 
 @description('Name of the storage account')
-param storageAccountName string = 'storageaccount${appSuffix}'
+param storageAccountName string = 'sg${appSuffix}'
 
 @description('Name of the storage account SKU')
 param storageAccountSkuName string = 'Standard_LRS'
