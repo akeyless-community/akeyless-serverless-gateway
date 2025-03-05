@@ -13,6 +13,12 @@ param appInsightsName string = 'appinsights-${appSuffix}'
 @description('Name of the managed environment')
 param managedEnvironmentName string
 
+@description('Name of the storage account')
+param storageAccountName string = 'sg${appSuffix}'
+
+@description('Name of the storage account SKU')
+param storageAccountSkuName string = 'Standard_LRS'
+
 param functionAppName string
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -53,6 +59,18 @@ resource managedEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
     }
 }
 
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-04-01' = {
+    name: storageAccountName
+    location: location 
+    sku: {
+        name: storageAccountSkuName
+    }
+    kind: 'StorageV2'
+    properties: {
+        supportsHttpsTrafficOnly: true
+    }
+}
+
 param initial_display_name string
 param akeyless_url string
 param cluster_name string
@@ -87,6 +105,8 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
     }
 }
 
+var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+
 var envVars = [
     {
         name: 'INITIAL_DISPLAY_NAME'
@@ -120,20 +140,21 @@ var envVars = [
         name: 'CUSTOMER_FRAGMENTS'
         value: customer_fragments
     }
-
-
     {
         name: 'ADMIN_ACCOUNT_ID'
         value: admin_account_id
     }
-
+    {
+        name: 'AzureWebJobsStorage'
+        value: storageAccountConnectionString
+    }
 ]
 
 var extraVars = [
-     {
-         name: 'ADMIN_ACCESS_KEY'
-         value: admin_access_key
-     }
+    {
+        name: 'ADMIN_ACCESS_KEY'
+        value: admin_access_key
+    }
 ]
 
 var appInsightsVars = [
@@ -170,4 +191,4 @@ resource updateAppSettings 'Microsoft.Web/sites/config@2022-03-01' = {
     }
 }
 
-output FunctionAppURL string = 'https://${functionApp.properties.defaultHostName}/api/gateway/console'
+output FunctionAppURL string = 'https://${functionApp.properties.defaultHostName}/api/gw/console'
