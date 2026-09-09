@@ -148,6 +148,10 @@ var envVars = [
         name: 'AzureWebJobsStorage'
         value: storageAccountConnectionString
     }
+    {
+        name: 'WEBSITES_PORT'
+        value: '8080'
+    }
 ]
 
 var extraVars = [
